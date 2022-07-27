@@ -1,10 +1,15 @@
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
+from data_preparation import load_data
+import pandas as pd
 
 
 class Encoder(LabelEncoder):
+    """Erweiterung von LabelEncoder um die Funktion fit_more, welche die Funktion fit ergänzt durch ein weiteres
+     hinzufügen von Klassen ermöglicht nachdem fit schon ausgeführt wurde, was über die Funktion
+     fit der Klasse LabelEncoder nicht möglich ist."""
     def fit_more(self, more_data):
-        print("testTestTest")
+        """fit further classes for new labels"""
         le = LabelEncoder()
         le.fit(more_data)
         for element in le.classes_:
@@ -13,31 +18,70 @@ class Encoder(LabelEncoder):
                 self.classes_ = np.append(self.classes_, [element])
                 print(self.classes_)
 
-"""
+
 def create_fit_encoder(para):
-    le = LabelEncoder()
+    """Erstellt einen Encoder und fitted die Features in liste para"""
+    le = Encoder()
     le.fit(para)
     return le
 
 
-def get_encoder():
+def set_manual_encoder(list):
+    """
+    ermöglicht manuelle Erstellung von Encodern. Nützlich wenn Reihenfolge der Werte relevant sind.
+    :param list: [["Key", [features]], [...], ]
+    :return: encoders zusammengefasst als dict und über ihre Keys ansprechbar
+
+    >>> encoders = set_manual_encoder([["MSZoning", np.array(["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM", "NI"])]])
+    a["MSZoning"]
+    >>> encoder = encoders["MSZoning"]
+    >>> d = {'MSZoning': ["A", "NI"]}
+    >>> df = pd.DataFrame(data=d)
+    >>> print(df)
+    >>> encoder.transform(df["MSZoning"])
+    >>> values = df['MSZoning'].values.tolist()
+    >>> print(values)
+    """
     dict_encoder = dict
-    dict_encoder["MSZoning"] = create_fit_encoder(["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM"])
-    dict_encoder["LotShape"] = create_fit_encoder(["Reg", "IR1", "IR2", "IR3"])
-    dict_encoder["LandContour"] = create_fit_encoder(["Lvl", "Bnk", "HLS", "Low"])
-    dict_encoder["LotConfig"] = create_fit_encoder(["Inside", "Corner", "CulDSac", "FR2", "FR3"])
-    dict_encoder["LandSlope"] = create_fit_encoder(["Gtl", "Mod", "Sev"])
-    dict_encoder[""] = create_fit_encoder([])
-    dict_encoder[""] = create_fit_encoder([])
-    dict_encoder[""] = create_fit_encoder([])
-    dict_encoder[""] = create_fit_encoder([])
-    dict_encoder[""] = create_fit_encoder([])
-    dict_encoder[""] = create_fit_encoder([])
+    for feature in list:
+        dict_encoder[feature[0]] = create_fit_encoder(feature[0])
     return dict_encoder
-"""
+
+
+def transform_categorial_into_numeric(df, transform_features, encoders=None):
+    """transform data and safe each label encoder with a simple LabelEncoder
+    >>> df = load_data("train.csv")
+    >>> df, categorial_encoders = transform_categorial_into_numeric(df, ["MSSubClass", "MSZoning", "Street", "Alley"])
+    >>> df["Street"][0]
+    1
+    """
+    if encoders is None:
+        dict_encoders = {}
+        for feature in transform_features:
+            le = Encoder()
+            df[feature] = le.fit_transform(df[feature])
+            dict_encoders[feature] = le
+        return df, dict_encoders
+    else:
+        for feature in transform_features:
+            print(feature)
+            for (key, element) in encoders.items():
+                print(f"{key}: {element}")
+            le = encoders[feature]
+            print(encoders[feature])
+            le.fit_more(df[feature])
+            encoders[feature] = le
+            le = encoders[feature]
+            df[feature] = le.transform(df[feature])
+        return df
+
+
+
 if __name__ == '__main__':
-    le = Encoder()
-    le.fit([0, 1, 2, 3])
-    le.fit_more([4])
-    print(le.classes_)
+    #le = Encoder()
+    #le.fit([0, 1, 2, 3])
+    #le.fit_more([4])
+    #print(le.classes_)
+    a = set_manual_encoder([["MSZoning", ["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM", "NI"]]])
+   # a["MSZoning"]
 
