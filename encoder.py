@@ -2,12 +2,19 @@ from sklearn.preprocessing import LabelEncoder
 import numpy as np
 from data_preparation import load_data
 import pandas as pd
+from sklearn.utils import column_or_1d
 
 
 class Encoder(LabelEncoder):
     """Erweiterung von LabelEncoder um die Funktion fit_more, welche die Funktion fit ergänzt durch ein weiteres
      hinzufügen von Klassen ermöglicht nachdem fit schon ausgeführt wurde, was über die Funktion
      fit der Klasse LabelEncoder nicht möglich ist."""
+
+    def fit(self, y):
+        y = column_or_1d(y, warn=True)
+        self.classes_ = pd.Series(y).unique()
+        return self
+
     def fit_more(self, more_data):
         """fit further classes for new labels"""
         le = LabelEncoder()
@@ -31,20 +38,18 @@ def set_manual_encoder(list):
     ermöglicht manuelle Erstellung von Encodern. Nützlich wenn Reihenfolge der Werte relevant sind.
     :param list: [["Key", [features]], [...], ]
     :return: encoders zusammengefasst als dict und über ihre Keys ansprechbar
-
-    >>> encoders = set_manual_encoder([["MSZoning", np.array(["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM", "NI"])]])
-    a["MSZoning"]
+    >>> encoders = set_manual_encoder([["MSZoning", ["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM", "NI"]]])
     >>> encoder = encoders["MSZoning"]
-    >>> d = {'MSZoning': ["A", "NI"]}
+    >>> d = {'MSZoning': ["A", "C", "NI"]}
     >>> df = pd.DataFrame(data=d)
-    >>> print(df)
-    >>> encoder.transform(df["MSZoning"])
+    >>> df["MSZoning"] = encoder.transform(df["MSZoning"])
     >>> values = df['MSZoning'].values.tolist()
     >>> print(values)
+    [0, 2, 9]
     """
-    dict_encoder = dict
+    dict_encoder = dict()
     for feature in list:
-        dict_encoder[feature[0]] = create_fit_encoder(feature[0])
+        dict_encoder[feature[0]] = create_fit_encoder(feature[1])
     return dict_encoder
 
 
@@ -83,5 +88,6 @@ if __name__ == '__main__':
     #le.fit_more([4])
     #print(le.classes_)
     a = set_manual_encoder([["MSZoning", ["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM", "NI"]]])
-   # a["MSZoning"]
+    print(a)
+    # a["MSZoning"]
 
