@@ -195,11 +195,13 @@ def clean_house_prices_data():
     df["MasVnrArea"].replace(to_replace=np.nan, value=0.0, inplace=True)
     df[['GarageQual', 'GarageCond', "GarageType", "GarageFinish"]] = df[
         ["GarageQual", "GarageCond", "GarageType", "GarageFinish"]].fillna('NI')
-    df.to_csv("clean_data.csv", encoding="utf-8")
     # Setze manuell die Zahlen der Kategorien
     set = [["MSZoning", ["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM", "NI"]],
-           ["LotShape", [["Reg", "IR1", "IR2", "IR3"]]]]
-    encoder.set_manual_encoder([])
+           ["LotShape", ["Reg", "IR1", "IR2", "IR3"]],
+           ["LandContour", ["Low", "HLS", "Bnk", "Lvl"]],
+           
+           ]
+    dict_encoders = encoder.set_manual_encoder(set)
     dict_encoder["MSZoning"] = create_fit_encoder(["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM"])
     dict_encoder["LotShape"] = create_fit_encoder(["Reg", "IR1", "IR2", "IR3"])
     dict_encoder["LandContour"] = create_fit_encoder(["Lvl", "Bnk", "HLS", "Low"])
@@ -211,6 +213,7 @@ def clean_house_prices_data():
     dict_encoder[""] = create_fit_encoder([])
     dict_encoder[""] = create_fit_encoder([])
     dict_encoder[""] = create_fit_encoder([])
+    df.to_csv("clean_data.csv", encoding="utf-8")
     return df
 
 

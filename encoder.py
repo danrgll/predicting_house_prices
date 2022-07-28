@@ -3,6 +3,7 @@ import numpy as np
 from data_preparation import load_data
 import pandas as pd
 from sklearn.utils import column_or_1d
+import category_encoders as ce
 
 
 class Encoder(LabelEncoder):
