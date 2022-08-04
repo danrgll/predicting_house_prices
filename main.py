@@ -8,7 +8,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn import metrics
 from matplotlib import pyplot as plt
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_val_predict
 import encoder
 from encoder import Encoder
 from encoder import transform_categorial_into_numeric, transform_categorial_into_target
@@ -28,17 +28,35 @@ def grid_search(x_train, y_train, seed, n_estimators, max_features, max_depth, b
     return GSCV.best_params_
 
 
-def random_search(estimator, param_distributions, n_iter=100, cv=3, verbose=2, n_jobs=-1):
+def random_search(x_train, y_train, estimator, param_distributions, n_iter=100, cv=3, verbose=2, n_jobs=-1, seed=42):
     """
 
-    :param estimator:
-    :param param_distributions:
-    :param n_iter:
-    :param cv:
-    :param verbose:
-    :param n_jobs:
-    :return:
+    :param estimator: der Schätzer/das Model für das gute Hyperparameter gesucht werden sollen
+    :param param_distributions: dict mit den Hyperparameter als key in Form eines Strings und als
+    Value eine Liste mit den auszuprobierenden Parametern
+    :param n_iter: Number of parameter settings that are sampled
+    :param cv: Determines the cross-validation splitting strategy. None, to use the default 5-fold cross validation,
+    integer, to specify the number of folds in a (Stratified)KFold,
+    :param verbose: Controls the verbosity: the higher, the more messages.
+    :param n_jobs: Number of jobs to run in parallel. None means 1 unless in a joblib.parallel_backend context. -1 means using all processors.
+    :return: best_paramter for estimator
     """
+    rf_random = RandomizedSearchCV(estimator=estimator, param_distributions=param_distributions, n_iter=n_iter, cv=cv, verbose=verbose,
+                                   random_state=seed, n_jobs=n_jobs)
+    rf_random.fit(x_train, y_train.values.ravel())
+    return rf_random.best_params_
+
+
+def evaluate(model, test_features, test_labels):
+    """evaluate regression model with test data"""
+    predictions = model.predict(test_features)
+    errors = abs(predictions - test_labels)
+    mape = 100 * np.mean(errors / test_labels)
+    accuracy = 100 - mape
+    print('Model Performance')
+    print('Average Error: {:0.4f} degrees.'.format(np.mean(errors)))
+    print('Accuracy = {:0.2f}%.'.format(accuracy))
+    return accuracy
 
 
 def evaluate_random_forest(x_train, y_train, n_estimators, max_features, max_depth):
@@ -154,9 +172,41 @@ if __name__ == '__main__':
     x_train = df_train.iloc[:, 0:71]
     y_train = df_train.iloc[:, 71:72]
     print(y_train)
-    best_para = grid_search(x_train, y_train, 42, [400, 500, 600, 700], [0.4, 0.5, 0.6], [30, 40, 50, 60, 70],
-                            [True, False], ["absolute_error", "squared_error"])
+    # Number of trees in random forest
+    n_estimators = [int(x) for x in np.linspace(start=10, stop=2000, num=10)]
+    # Number of features to consider at every split
+    max_features = ['auto', 'sqrt']
+    # Maximum number of levels in tree
+    max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
+    max_depth.append(None)
+    # Minimum number of samples required to split a node
+    min_samples_split = [2, 5, 10]
+    # Minimum number of samples required at each leaf node
+    min_samples_leaf = [1, 2, 4]
+    # Method of selecting samples for training each tree
+    bootstrap = [True, False]
+    random_grid = {'n_estimators': n_estimators,
+                   'max_features': max_features,
+                   'max_depth': max_depth,
+                   'min_samples_split': min_samples_split,
+                   'min_samples_leaf': min_samples_leaf,
+                   'bootstrap': bootstrap}
+    rf = RandomForestRegressor()
+    n_iter = 200  # number of samples
+    best_para = random_search(x_train, y_train, rf, random_grid, n_iter=n_iter, cv=10)
     print(best_para)
+    # mit cv=3, {'n_estimators': 673, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 40, 'bootstrap': False}
+    # mit cv=10 {'n_estimators': 231, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': None, 'bootstrap': False}
+    #best_model = RandomForestRegressor(n_estimators=673, min_samples_split=2, min_samples_leaf=1, max_features="sqrt", max_depth=40, bootstrap=False)
+    #prediction = cross_val_predict(best_model, x_train, y_train, cv=3)
+    #print(prediction)
+    #fig, ax = plt.subplots()
+    #ax.scatter(y_train, prediction, edgecolors=(0, 0, 0))
+    #ax.plot([y_train.min(), y_train.max()], [y_train.min(), y_train.max()], "k-", lw=2)
+    #ax.set_xlabel("Measured")
+    #ax.set_ylabel("Predicted")
+    #plt.show()
+
 
 
 """
