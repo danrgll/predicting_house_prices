@@ -3,13 +3,15 @@ import numpy as np
 from data_preparation import load_data
 import pandas as pd
 from sklearn.utils import column_or_1d
+from category_encoders import TargetEncoder
 import category_encoders as ce
 
 
 class Encoder(LabelEncoder):
     """Erweiterung von LabelEncoder um die Funktion fit_more, welche die Funktion fit ergänzt durch ein weiteres
      hinzufügen von Klassen ermöglicht nachdem fit schon ausgeführt wurde, was über die Funktion
-     fit der Klasse LabelEncoder nicht möglich ist."""
+     fit der Klasse LabelEncoder nicht möglich ist. Der Encoder numeriert die Kategorien nach der Reihenfolge, sprich
+     bei Beachtung der Reihenfolge erhält man einen Ordinal/label Encoder"""
 
     def fit(self, y):
         y = column_or_1d(y, warn=True)
@@ -82,6 +84,21 @@ def transform_categorial_into_numeric(df, transform_features, encoders=None):
         return df
 
 
+def transform_categorial_into_target(df, transform_features):
+    """transform data with an Target Encoder  and safe each label. Target Encoding means features are replaced with a
+    blend of posterior probability of the target given particular categorical value and the prior probability of the
+    target over all the training data.”"""
+    dict_encoders = {}
+    for feature in transform_features:
+        le = TargetEncoder()
+        if df[feature] is None:
+            raise Exception("Fehler")
+        df[feature] = le.fit_transform(df[feature], df["SalePrice"])
+        dict_encoders[feature] = le
+    return df, dict_encoders
+
+
+
 
 if __name__ == '__main__':
     #le = Encoder()
@@ -90,5 +107,6 @@ if __name__ == '__main__':
     #print(le.classes_)
     a = set_manual_encoder([["MSZoning", ["A", "C(all)", "C", "FV", "I", "RH", "RL", "RP", "RM", "NI"]]])
     print(a)
-    # a["MSZoning"]
+
+
 
