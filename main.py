@@ -1,15 +1,13 @@
 import data_preparation as dp
+import pickle
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
 from sklearn import metrics
 from matplotlib import pyplot as plt
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from encoder import transform_categorial_into_numeric, transform_categorial_into_target
-from hyperparamter_search import search_hyper_para_random_forest
+from hyperparamter_search import search_hyperparameter_random_forest, search_hyperparamter_gradientboosting
 
 
 def evaluate(model, test_features, test_labels):
@@ -22,6 +20,7 @@ def evaluate(model, test_features, test_labels):
     print('Average Error: {:0.4f} degrees.'.format(np.mean(errors)))
     print('Accuracy = {:0.2f}%.'.format(accuracy))
     return accuracy
+
 
 """
 def evaluate_random_forest(x_train, y_train, n_estimators, max_features, max_depth):
@@ -88,7 +87,7 @@ def clean_house_prices_data():
     dp.delete_features(df,
                        ["Alley", "FireplaceQu", "PoolQC", "Fence", "MiscFeature", "Utilities", "Street",
                         "LowQualFinSF",
-                        "GarageYrBlt"])
+                        "GarageYrBlt", "Id"])
     average = dp.replace_null_with_average_number(df, ["LotFrontage"])
     df["MasVnrType"].replace(to_replace=np.nan, value="None", inplace=True)
     df["MasVnrArea"].replace(to_replace=np.nan, value=0.0, inplace=True)
@@ -132,11 +131,33 @@ def encoding_data(df):
     return df_train, df_test
 
 
-def fit_and_val_random_forest(x_train, y_train):
-    best_model = RandomForestRegressor(n_estimators=673, min_samples_split=2, min_samples_leaf=1, max_features="sqrt",
-                                       max_depth=None, bootstrap=False)
+# ToDo: eine datei ausgeben mit den wichtigsten daten des Models als Validierungsprozess
+
+def fit_and_val_random_forest(x_train, y_train, save=True):
+    """
+    :param save: save model (True, False)
+    :return:
+    """
+    best_model = RandomForestRegressor(n_estimators=600, min_samples_split=3, min_samples_leaf=1, max_features="sqrt",
+                                       max_depth=30, bootstrap=False)
     x_train, x_val, y_train, y_val = dp.split_data(x_train, y_train, test_size=0.1, shuffle=True)
     best_model.fit(x_train, y_train.values.ravel())
+    if save is True:
+        filename = "rf_model.sav"
+        pickle.dump(best_model, open(filename, "wb"))
+    print("METRICS")
+    print(best_model.feature_importances_)
+    zipped = zip(best_model.feature_importances_, x_train.columns)
+    sorted_zip = sorted(zipped, key=lambda x: x[0])
+    zipped_list = list(sorted_zip)
+    print(zipped_list)
+    columns = list(zip(*zipped_list))
+    sort_feature_imp = list(columns[0])
+    x_features = list(columns[1])
+    print(columns)
+    # print("feature importance:", zipped_list)
+    plt.barh(x_features, sort_feature_imp)
+    plt.show()
     prediction = best_model.predict(x_val)
     print("Test")
     y_true = y_val["SalePrice"].tolist()
@@ -147,7 +168,78 @@ def fit_and_val_random_forest(x_train, y_train):
     validation["Abweichung"] = abs(validation["SalePrice"] - validation["Prediction"])
     print(validation.info())
     df_val = validation.sort_values("Abweichung")
-    df_val.to_csv("validation.csv", encoding="utf-8")
+    df_val.to_csv("validation_random_forest.csv", encoding="utf-8")
+    print(df_val)
+
+
+def fit_and_val_gradient_boosting(x_train, y_train, save=True):
+    """
+    :param save: save model(True,False)
+    :return:
+    """
+    para = {'subsample': 0.9, 'n_estimators': 400, 'min_samples_split': 3, 'min_samples_leaf': 2, 'max_features': 'auto',
+            'max_depth': 2, 'loss': 'squared_error', 'learning_rate': 0.08}
+    best_model = GradientBoostingRegressor(**para)
+    """    best_model = GradientBoostingRegressor(n_estimators=200, criterion='mse',
+             learning_rate=0.03, loss='ls', max_depth=12,
+             max_features=None, max_leaf_nodes=None,
+             min_samples_leaf=16, min_samples_split=16,
+             subsample=1.0)
+             """
+    x_train, x_val, y_train, y_val = dp.split_data(x_train, y_train, test_size=0.1, shuffle=True)
+    best_model.fit(x_train, y_train.values.ravel())
+    if save is True:
+        filename = "gbrt_model.pkl"
+        pickle.dump(best_model, open(filename, "wb"))
+    print("METRICS")
+    print(best_model.feature_importances_)
+    zipped = zip(best_model.feature_importances_, x_train.columns)
+    sorted_zip = sorted(zipped, key=lambda x: x[0])
+    zipped_list = list(sorted_zip)
+    print(zipped_list)
+    columns = list(zip(*zipped_list))
+    sort_feature_imp = list(columns[0])
+    x_features = list(columns[1])
+    print(columns)
+    # print("feature importance:", zipped_list)
+    plt.barh(x_features, sort_feature_imp)
+    plt.show()
+    prediction = best_model.predict(x_val)
+    print("Test")
+    y_true = y_val["SalePrice"].tolist()
+    print(y_true)
+    print(prediction)
+    print(f"MEA: {metrics.mean_absolute_error(y_val, prediction)}")
+    validation = y_val.assign(Prediction=prediction)
+    validation["Abweichung"] = abs(validation["SalePrice"] - validation["Prediction"])
+    print(validation.info())
+    df_val = validation.sort_values("Abweichung")
+    df_val.to_csv("validation_grdb.csv", encoding="utf-8")
+    print(df_val)
+
+
+def fit_val_neurol_network():
+    pass
+
+
+def fit_and_val_ensemble_model(x_train, y_train):
+    rf = RandomForestRegressor()
+    grdb = GradientBoostingRegressor()
+    ensemble_model = VotingRegressor([("rf", rf), ("grdb", grdb)], n_jobs=-1)
+    x_train, x_val, y_train, y_val = dp.split_data(x_train, y_train, test_size=0.1, shuffle=True)
+    ensemble_model.fit(x_train, y_train.values.ravel())
+    print("METRICS")
+    prediction = ensemble_model.predict(x_val)
+    print("Test")
+    y_true = y_val["SalePrice"].tolist()
+    print(y_true)
+    print(prediction)
+    print(f"MEA: {metrics.mean_absolute_error(y_val, prediction)}")
+    validation = y_val.assign(Prediction=prediction)
+    validation["Abweichung"] = abs(validation["SalePrice"] - validation["Prediction"])
+    print(validation.info())
+    df_val = validation.sort_values("Abweichung")
+    df_val.to_csv("validation_ensemble.csv", encoding="utf-8")
     print(df_val)
 
 
@@ -155,14 +247,16 @@ if __name__ == '__main__':
     df = clean_house_prices_data()
     df_train, df_test = encoding_data(df)
     print(df_train.info())
-    x_train = df_train.iloc[:, 0:71]
-    y_train = df_train.iloc[:, 71:72]
-    print(y_train)
-    para =search_hyper_para_random_forest(x_train, y_train, "grid")
-    print(para)
+    x_train = df_train.iloc[:, 0:70]
+    y_train = df_train.iloc[:, 70:71]
+    # para = search_hyperparamter_gradientboosting(x_train, y_train, "random")
+    # para =search_hyper_para_random_forest(x_train, y_train, "grid")
+    # print(para)
     # {'bootstrap': False, 'max_depth': 30, 'max_features': 'sqrt', 'min_samples_leaf': 1, 'min_samples_split': 3, 'n_estimators': 600}
     # mit cv=3, {'n_estimators': 673, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 40, 'bootstrap': False}
     # mit cv=10 {'n_estimators': 231, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': None, 'bootstrap': False}
-    #best_model = RandomForestRegressor(n_estimators=673, min_samples_split=2, min_samples_leaf=1, max_features="sqrt", max_depth=40, bootstrap=False)
+    # best_model = RandomForestRegressor(n_estimators=673, min_samples_split=2, min_samples_leaf=1, max_features="sqrt", max_depth=40, bootstrap=False)
+    print(y_train)
     # fit_and_val_random_forest(x_train, y_train)
+    fit_and_val_gradient_boosting(x_train, y_train)
     # MEA: 20847.467290285473
