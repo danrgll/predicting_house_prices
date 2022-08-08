@@ -3,7 +3,9 @@ import pickle
 import numpy as np
 import pandas as pd
 from encoder import transform_categorial_into_numeric, transform_categorial_into_target
+from hyperparamter_search import search_hyperparameter_random_forest, search_hyperparamter_gradientboosting
 from evaluation import fit_and_val_gradient_boosting, fit_and_val_random_forest, fit_and_val_ensemble_model
+from settings import RF_PARA_GRID, GDB_PARA_GRID
 
 
 def clean_house_prices_data():
@@ -74,14 +76,11 @@ if __name__ == '__main__':
     print(df_train.info())
     x_train = df_train.iloc[:, 0:70]
     y_train = df_train.iloc[:, 70:71]
-    # para = search_hyperparamter_gradientboosting(x_train, y_train, "random")
-    # para =search_hyper_para_random_forest(x_train, y_train, "grid")
+    # para = search_hyperparamter_gradientboosting(x_train, y_train, "random", GDB_PARA_GRID)
+    para = search_hyperparameter_random_forest(x_train, y_train, "grid", RF_PARA_GRID)
     # print(para)
-    # {'bootstrap': False, 'max_depth': 30, 'max_features': 'sqrt', 'min_samples_leaf': 1, 'min_samples_split': 3, 'n_estimators': 600}
-    # mit cv=3, {'n_estimators': 673, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 40, 'bootstrap': False}
-    # mit cv=10 {'n_estimators': 231, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': None, 'bootstrap': False}
-    # best_model = RandomForestRegressor(n_estimators=673, min_samples_split=2, min_samples_leaf=1, max_features="sqrt", max_depth=40, bootstrap=False)
     print(y_train)
+    # Parameter der Modelle die am vielversprechensten waren
     para_rf = {"n_estimators": 600, "min_samples_split": 3, "min_samples_leaf": 1, "max_features": "sqrt",
             "max_depth": 30, "bootstrap": False}
     para_gdb = {'subsample': 0.9, 'n_estimators': 400, 'min_samples_split': 3, 'min_samples_leaf': 2,
@@ -89,5 +88,5 @@ if __name__ == '__main__':
             'max_depth': 2, 'loss': 'squared_error', 'learning_rate': 0.08}
     # fit_and_val_random_forest(x_train, y_train, para_rf)
     # fit_and_val_gradient_boosting(x_train, y_train, para_gdb)
-    fit_and_val_ensemble_model(x_train, y_train)
+    # fit_and_val_ensemble_model(x_train, y_train)
     # MEA: 20847.467290285473
