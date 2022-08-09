@@ -26,14 +26,25 @@ def clean_house_prices_data():
     dp.delete_features(df,
                        ["Alley", "FireplaceQu", "PoolQC", "Fence", "MiscFeature", "Utilities", "Street",
                         "LowQualFinSF",
-                        "GarageYrBlt", "Id"])
+                        "GarageYrBlt", "Id", "BsmtFinType2"])
     average = dp.replace_null_with_average_number(df, ["LotFrontage"])
     df["MasVnrType"].replace(to_replace=np.nan, value="None", inplace=True)
     df["MasVnrArea"].replace(to_replace=np.nan, value=0.0, inplace=True)
-    df[['GarageQual', 'GarageCond', "GarageType", "GarageFinish"]] = df[
-        ["GarageQual", "GarageCond", "GarageType", "GarageFinish"]].fillna('NI')
+    df["BsmtFullBath"].replace(to_replace=np.nan, value=0.0, inplace=True)
+    df["BsmtHalfBath"].replace(to_replace=np.nan, value=0.0, inplace=True)
+    df["BsmtFinSF1"].replace(to_replace=np.nan, value=0.0, inplace=True)
+    df["BsmtFinSF2"].replace(to_replace=np.nan, value=0.0, inplace=True)
+    df["BsmtUnfSF"].replace(to_replace=np.nan, value=0.0, inplace=True)
+    df["TotalBsmtSF"].replace(to_replace=np.nan, value=0.0, inplace=True)
+    df[['GarageQual', 'GarageCond', "GarageType", "GarageFinish", "BsmtQual", "BsmtCond", "BsmtExposure", "BsmtFinType1"]] = df[
+        ["GarageQual", "GarageCond", "GarageType", "GarageFinish", "BsmtQual", "BsmtCond", "BsmtExposure", "BsmtFinType1"]].fillna('NI')
     # drop rows which have missing values in choosen columns
     # ToDo Missing Values aus Test Set werden weggeworfen shit
+    df_train, df_test = df.xs(0), df.xs(1)
+    feature, data = dp.features_with_null_objects(df_test)
+    data.to_csv("missing_data.csv", encoding="utf-8")
+    print(feature)
+    print(data.info())
     df = df.dropna(axis=0, subset=["MSZoning", "Exterior1st", "Exterior2nd", "BsmtFinSF1", "BsmtFinSF2", "BsmtUnfSF",
                                    "TotalBsmtSF", "BsmtFullBath", "BsmtHalfBath", "KitchenQual", "Functional", "GarageCars",
                                    "GarageArea", "SaleType", "BsmtQual", "BsmtExposure"])
@@ -57,7 +68,6 @@ def encoding_data(df):
                             "ExterCond", "Foundation", "BsmtQual",
                             "BsmtCond",
                             "BsmtExposure", "BsmtFinType1",
-                            "BsmtFinType2",
                             "Heating", "HeatingQC", "CentralAir",
                             "Electrical",
                             "KitchenQual", "Functional", "GarageType",
@@ -100,7 +110,6 @@ def final_predict(df_test):
     df.to_csv("submit.csv")
 
 
-
 if __name__ == '__main__':
     df = clean_house_prices_data()
     df_train, df_test = encoding_data(df)
@@ -123,5 +132,5 @@ if __name__ == '__main__':
 
     # final model fit
     # save_models(x_train, y_train, para_rf, para_gdb)
-    final_predict(df_test)
+    # final_predict(df_test)
 
