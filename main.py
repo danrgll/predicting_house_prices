@@ -2,6 +2,7 @@ import data_preparation as dp
 import pickle
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
 from encoder import transform_categorial_into_numeric, transform_categorial_into_target
 from hyperparamter_search import search_hyperparameter_random_forest, search_hyperparamter_gradientboosting
 from evaluation import fit_and_val_gradient_boosting, fit_and_val_random_forest, fit_and_val_ensemble_model
@@ -15,7 +16,6 @@ def clean_house_prices_data():
                 894,
                 897, 984, 1000, 1011, 1035, 1045, 1048, 1049, 1090, 1179, 1216, 1218, 1230, 1321, 1412, 553,
                 1232, 39, 948, 332, 1379], axis=0)
-    df_train.to_csv("check5.csv", encoding="utf-8")
     # target_data = df_train.iloc[:, 80:81]
     # del df_train["SalePrice"]
     df_test = dp.load_data("test.csv", encoding="utf-8")
@@ -33,6 +33,7 @@ def clean_house_prices_data():
     df[['GarageQual', 'GarageCond', "GarageType", "GarageFinish"]] = df[
         ["GarageQual", "GarageCond", "GarageType", "GarageFinish"]].fillna('NI')
     # drop rows which have missing values in choosen columns
+    # ToDo Missing Values aus Test Set werden weggeworfen shit
     df = df.dropna(axis=0, subset=["MSZoning", "Exterior1st", "Exterior2nd", "BsmtFinSF1", "BsmtFinSF2", "BsmtUnfSF",
                                    "TotalBsmtSF", "BsmtFullBath", "BsmtHalfBath", "KitchenQual", "Functional", "GarageCars",
                                    "GarageArea", "SaleType", "BsmtQual", "BsmtExposure"])
@@ -42,7 +43,7 @@ def clean_house_prices_data():
 def encoding_data(df):
     # transform categorial variables to a target(Encoding) for all possibilieties
     df_train, df_test = df.xs(0), df.xs(1)
-    df_train["SalePrice"].to_csv("check4", encoding="utf-8")
+    # df_train["SalePrice"].to_csv("check4", encoding="utf-8")
     dp.delete_features(df_test, ["SalePrice"])
     # df.insert(-1, "SalePrice", target_data, True)
     features_transformed = ["MSZoning",
@@ -70,23 +71,57 @@ def encoding_data(df):
     return df_train, df_test
 
 
+def save_models(x_train, y_train, para_rf, para_gdb):
+    # save final model fit
+    rf = RandomForestRegressor(**para_rf)
+    rf.fit(x_train, y_train.values.ravel())
+    pickle.dump(rf, open("rf_model.sav", "wb"))
+
+    gdb = GradientBoostingRegressor(**para_gdb)
+    gdb.fit(x_train, y_train.values.ravel())
+    pickle.dump(gdb, open("gdb_model.pkl", "wb"))
+
+    rf = RandomForestRegressor(**para_rf)
+    gdb = GradientBoostingRegressor(**para_gdb)
+    ensemble_model = VotingRegressor([("rf", rf), ("grdb", gdb)], n_jobs=-1)
+    ensemble_model.fit(x_train, y_train.values.ravel())
+    pickle.dump(ensemble_model, open("ensemble_model.pkl", "wb"))
+
+
+def final_predict(df_test):
+    print(df_test)
+    ensemble_model = pickle.load(open("ensemble_model.pkl", 'rb'))
+    prediction = ensemble_model.predict(df_test)
+    id = list(range(1461, 2920))
+    print(len(id))
+    print(len(prediction))
+    d = {'Id': list(range(1461, 2920)), 'SalePrice': prediction}
+    df = pd.DataFrame(data=d)
+    df.to_csv("submit.csv")
+
+
+
 if __name__ == '__main__':
     df = clean_house_prices_data()
     df_train, df_test = encoding_data(df)
     print(df_train.info())
     x_train = df_train.iloc[:, 0:70]
     y_train = df_train.iloc[:, 70:71]
-    # para = search_hyperparamter_gradientboosting(x_train, y_train, "random", GDB_PARA_GRID)
-    para = search_hyperparameter_random_forest(x_train, y_train, "grid", RF_PARA_GRID)
+    # para = search_hyperparamter_gradientboosting(x_train, y_train, "grid", GDB_PARA_GRID, plot_training=False)
+    # rf_model = search_hyperparameter_random_forest(x_train, y_train, "grid", RF_PARA_GRID, plot_training=True)
     # print(para)
     print(y_train)
     # Parameter der Modelle die am vielversprechensten waren
-    para_rf = {"n_estimators": 600, "min_samples_split": 3, "min_samples_leaf": 1, "max_features": "sqrt",
-            "max_depth": 30, "bootstrap": False}
-    para_gdb = {'subsample': 0.9, 'n_estimators': 400, 'min_samples_split': 3, 'min_samples_leaf': 2,
+    para_rf = {"n_estimators": 50, "min_samples_split": 3, "min_samples_leaf": 1, "max_features": "sqrt",
+            "max_depth": None, "bootstrap": False}
+    para_gdb = {'subsample': 0.95, 'n_estimators': 500, 'min_samples_split': 3, 'min_samples_leaf': 2,
             'max_features': 'auto',
-            'max_depth': 2, 'loss': 'squared_error', 'learning_rate': 0.08}
+            'max_depth': 2, 'loss': 'squared_error', 'learning_rate': 0.05}
     # fit_and_val_random_forest(x_train, y_train, para_rf)
     # fit_and_val_gradient_boosting(x_train, y_train, para_gdb)
-    # fit_and_val_ensemble_model(x_train, y_train)
-    # MEA: 20847.467290285473
+    # fit_and_val_ensemble_model(x_train, y_train, para_rf, para_gdb)
+
+    # final model fit
+    # save_models(x_train, y_train, para_rf, para_gdb)
+    final_predict(df_test)
+

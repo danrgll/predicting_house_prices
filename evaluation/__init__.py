@@ -30,7 +30,7 @@ def fit_and_val_random_forest(x_train, y_train, para, save=True):
     x_train, x_val, y_train, y_val = dp.split_data(x_train, y_train, test_size=0.1, shuffle=True)
     best_model.fit(x_train, y_train.values.ravel())
     if save is True:
-        filename = "rf_model.sav"
+        filename = "rf_model_val.sav"
         pickle.dump(best_model, open(filename, "wb"))
     print("METRICS")
     print(best_model.feature_importances_)
@@ -57,6 +57,7 @@ def fit_and_val_random_forest(x_train, y_train, para, save=True):
     df_val = validation.sort_values("Abweichung")
     df_val.to_csv("validation_random_forest.csv", encoding="utf-8")
     print(df_val)
+    evaluate(best_model, x_val, y_true)
 
 
 def fit_and_val_gradient_boosting(x_train, y_train, para, save=True):
@@ -75,7 +76,7 @@ def fit_and_val_gradient_boosting(x_train, y_train, para, save=True):
     x_train, x_val, y_train, y_val = dp.split_data(x_train, y_train, test_size=0.1, shuffle=True)
     best_model.fit(x_train, y_train.values.ravel())
     if save is True:
-        filename = "gbrt_model.pkl"
+        filename = "gbrt_model_val.pkl"
         pickle.dump(best_model, open(filename, "wb"))
     print("METRICS")
     print(best_model.feature_importances_)
@@ -102,21 +103,17 @@ def fit_and_val_gradient_boosting(x_train, y_train, para, save=True):
     df_val = validation.sort_values("Abweichung")
     df_val.to_csv("validation_grdb.csv", encoding="utf-8")
     print(df_val)
+    evaluate(best_model, x_val, y_true)
 
 
 def fit_val_neurol_network():
     pass
 
 
-def fit_and_val_ensemble_model(x_train, y_train):
-    para_rf = {"n_estimators": 600, "min_samples_split": 3, "min_samples_leaf": 1, "max_features": "sqrt",
-            "max_depth": 30, "bootstrap": False}
+def fit_and_val_ensemble_model(x_train, y_train, para_rf, para_gdb):
     rf = RandomForestRegressor(**para_rf)
-    para_grdb = {'subsample': 0.9, 'n_estimators': 400, 'min_samples_split': 3, 'min_samples_leaf': 2,
-            'max_features': 'auto',
-            'max_depth': 2, 'loss': 'squared_error', 'learning_rate': 0.08}
-    grdb = GradientBoostingRegressor(**para_grdb)
-    ensemble_model = VotingRegressor([("rf", rf), ("grdb", grdb)], n_jobs=-1)
+    gdb = GradientBoostingRegressor(**para_gdb)
+    ensemble_model = VotingRegressor([("rf", rf), ("grdb", gdb)], n_jobs=-1)
     x_train, x_val, y_train, y_val = dp.split_data(x_train, y_train, test_size=0.1, shuffle=True)
     ensemble_model.fit(x_train, y_train.values.ravel())
     print("METRICS")
@@ -132,3 +129,4 @@ def fit_and_val_ensemble_model(x_train, y_train):
     df_val = validation.sort_values("Abweichung")
     df_val.to_csv("validation_ensemble.csv", encoding="utf-8")
     print(df_val)
+    evaluate(ensemble_model, x_val, y_true)
