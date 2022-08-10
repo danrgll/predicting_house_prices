@@ -6,11 +6,18 @@ from sklearn.preprocessing import OneHotEncoder
 from matplotlib import pyplot as plt
 
 
-def load_data(path, encoding=None):
+def load_data(path, encoding=None, seperator=None):
     if encoding is None:
-        return pd.read_csv(path)
+        if seperator is None:
+            return pd.read_csv(path)
+        else:
+            return pd.read_csv(path, sep=seperator)
     else:
-        return pd.read_csv(path, encoding=encoding)
+        if seperator is None:
+            return pd.read_csv(path, encoding=encoding)
+        else:
+            return pd.read_csv(path, encoding=encoding, sep=seperator)
+
 
 
 def split_data(x_data, y_data, test_size=0.2, shuffle=False):
