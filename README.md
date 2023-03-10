@@ -7,7 +7,11 @@ This project is about analyzing and predicting the sales prices of residential h
 The Ames Housing Dataset contains a total of 79 explanatory variables describing (almost) every aspect of residential homes in Ames, Iowa. The dataset was compiled by Dean De Cock for use in data science education and research, and it has become a popular choice for practicing data scientists due to its rich set of features and complex relationships between them.
 Data Cleaning and Preprocessing
 
+## Data Cleaning and Preprocessing
+
 Before building the regression model, the dataset needed to be cleaned and preprocessed to remove missing values, handle categorical variables, and engineer new features. This involved performing exploratory data analysis (EDA) to identify patterns and trends in the data, imputing missing values using appropriate techniques, and encoding categorical variables using one-hot encoding or label encoding.
+
+
 
 ## Model Development and Evaluation
 
