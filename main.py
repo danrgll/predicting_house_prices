@@ -112,12 +112,12 @@ def save_models(x_train, y_train, para_rf, para_gdb):
     gdb = GradientBoostingRegressor(**para_gdb)
     ensemble_model = VotingRegressor([("rf", rf), ("grdb", gdb)], n_jobs=-1)
     ensemble_model.fit(x_train, y_train.values.ravel())
-    pickle.dump(ensemble_model, open("ensemble_model.pkl", "wb"))
+    pickle.dump(ensemble_model, open("models/ensemble_model.pkl", "wb"))
 
 
 def final_predict(df_test):
     print(df_test)
-    ensemble_model = pickle.load(open("ensemble_model.pkl", 'rb'))
+    ensemble_model = pickle.load(open("models/ensemble_model.pkl", 'rb'))
     id = df_test["Id"]
     dp.delete_features(df_test, ["Id"])
     print(df_test.info())
