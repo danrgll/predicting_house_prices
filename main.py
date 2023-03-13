@@ -1,11 +1,11 @@
-import data_preparation as dp
+import data_preprocessing as dp
 import pickle
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
-from encoder import transform_categorial_into_numeric, transform_categorial_into_target
+from data_encoding import transform_categorial_into_numeric, transform_categorial_into_target
 from hyperparamter_search import search_hyperparameter_random_forest, search_hyperparamter_gradientboosting
-from evaluation import fit_and_val_gradient_boosting, fit_and_val_random_forest, fit_and_val_ensemble_model
+from machine_learning import fit_and_val_gradient_boosting, fit_and_val_random_forest, fit_and_val_ensemble_model
 from settings import RF_PARA_GRID, GDB_PARA_GRID
 
 
@@ -40,7 +40,6 @@ def clean_house_prices_data():
     df[['GarageQual', 'GarageCond', "GarageType", "GarageFinish", "BsmtQual", "BsmtCond", "BsmtExposure", "BsmtFinType1"]] = df[
         ["GarageQual", "GarageCond", "GarageType", "GarageFinish", "BsmtQual", "BsmtCond", "BsmtExposure", "BsmtFinType1"]].fillna('NI')
     # drop rows which have missing values in choosen columns
-    # ToDo Missing Values aus Test Set werden weggeworfen shit
     df_train, df_test = df.xs(0), df.xs(1)
     df_test.to_csv("modified_test.csv", encoding="utf-8")
     # feature, data = dp.features_with_null_objects(df_test)
@@ -140,7 +139,6 @@ if __name__ == '__main__':
     print("InfoInfo")
     print(df_train.info())
     x_train = df_train.iloc[:, 0:69]
-    print("kddkdkddk")
     print(x_train.info())
     y_train = df_train.iloc[:, 69:70]
     # para = search_hyperparamter_gradientboosting(x_train, y_train, "grid", GDB_PARA_GRID, plot_training=False)
